@@ -1,33 +1,37 @@
-import { StyleSheet, Appearance } from 'react-native';
+import { StyleSheet, Appearance, Dimensions } from 'react-native';
 
-const isDark = Appearance.getColorScheme() === 'dark';
+const { width } = Dimensions.get('window');
 
 export const colors = {
-    // PMP Suite Palette (from styles.css)
-    primary: '#f0b90b', // --yellow
-    success: '#0ecb81', // --green
-    danger: '#f6465d',  // --red
+    // PMP Suite Palette
+    primary: '#f0b90b', // Yellow
+    success: '#0ecb81', // Green
+    danger: '#f6465d',  // Red
+    info: '#3182ce',    // Blue
+    warning: '#ed8936', // Orange
 
     // Theme Aware Colors
     light: {
-        bg: '#f6f7fb',
+        bg: '#F8F9FD',
         panel: '#ffffff',
         card: '#ffffff',
-        text: '#0b0e11',
-        border: '#e5e7eb',
-        muted: '#667085',
-        inputBg: '#ffffff',
-        navBg: '#ffffff',
+        text: '#1A202C',
+        border: '#EDF2F7',
+        muted: '#718096',
+        inputBg: '#FFFFFF',
+        navBg: '#FFFFFF',
+        surface: 'rgba(255, 255, 255, 0.8)',
     },
     dark: {
-        bg: '#0b0e11',
-        panel: '#11161c',
-        card: '#121821',
-        text: '#eaecef',
-        border: '#1f2937',
-        muted: '#9ca3af',
-        inputBg: '#0b0e11',
-        navBg: '#11161c',
+        bg: '#0F172A',
+        panel: '#1E293B',
+        card: '#1E293B',
+        text: '#F8FAFC',
+        border: '#334155',
+        muted: '#94A3B8',
+        inputBg: '#0F172A',
+        navBg: '#1E293B',
+        surface: 'rgba(30, 41, 59, 0.8)',
     }
 };
 
@@ -36,7 +40,6 @@ export const getTheme = () => {
     return scheme === 'dark' ? colors.dark : colors.light;
 };
 
-// Estilos globales dinámicos
 export const getGlobalStyles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
@@ -44,56 +47,83 @@ export const getGlobalStyles = (theme) => StyleSheet.create({
         backgroundColor: theme.bg,
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
+        fontSize: 28,
+        fontWeight: '800',
+        marginBottom: 24,
         color: theme.text,
-        textAlign: 'center'
+        letterSpacing: -0.5,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.muted,
+        marginBottom: 8,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     input: {
         backgroundColor: theme.inputBg,
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 15,
-        borderWidth: 1,
+        padding: 16,
+        borderRadius: 16,
+        marginBottom: 20,
+        borderWidth: 1.5,
         borderColor: theme.border,
         color: theme.text,
+        fontSize: 16,
     },
     button: {
         backgroundColor: colors.primary,
-        padding: 15,
-        borderRadius: 10,
+        paddingVertical: 18,
+        borderRadius: 18,
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 12,
+        shadowColor: colors.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
     },
     buttonText: {
-        color: '#111', // Black on Yellow
-        fontWeight: 'bold',
-        fontSize: 16,
+        color: '#000',
+        fontWeight: '700',
+        fontSize: 18,
     },
     card: {
         backgroundColor: theme.card,
-        padding: 15,
-        borderRadius: 14,
-        marginBottom: 10,
-        borderWidth: 0.5,
+        padding: 20,
+        borderRadius: 24,
+        marginBottom: 16,
+        borderWidth: 1,
         borderColor: theme.border,
-        // Shadow only visible on light mode mainly
+        // Premium Shadow
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: theme.bg === '#F8F9FD' ? 0.05 : 0.2,
+        shadowRadius: 20,
+        elevation: 4,
     },
-    label: {
-        fontWeight: 'bold',
-        color: theme.text,
-        marginTop: 5,
-        marginBottom: 5
+    glassCard: {
+        backgroundColor: theme.surface,
+        borderRadius: 24,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: theme.border,
+        backdropFilter: 'blur(10px)', // Solo web, en RN se simula con opacidad y elevación
     },
-    subtitle: {
-        color: theme.muted,
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    badge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        backgroundColor: theme.border,
+    },
+    badgeText: {
         fontSize: 12,
-        marginBottom: 5
+        fontWeight: 'Bold',
+        color: theme.text,
     }
 });
