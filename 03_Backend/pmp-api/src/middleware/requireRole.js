@@ -7,3 +7,13 @@ export function requireRole(roleCode) {
     next();
   };
 }
+
+export function requireAnyRole(...roles) {
+  return (req, res, next) => {
+    const userRole = req.user?.rol;
+    if (!userRole || !roles.includes(userRole)) {
+      return res.status(403).json({ error: "Forbidden: Permisos insuficientes." });
+    }
+    next();
+  };
+}

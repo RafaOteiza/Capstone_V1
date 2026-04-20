@@ -42,13 +42,13 @@ router.get("/dispatch-queue", firebaseAuth, async (req, res, next) => {
         o.bus_ppu, 
         COALESCE(o.validador_serie, o.consola_serie) as serie,
         u.nombre || ' ' || u.apellido as tecnico_reparador,
-        r.fecha_reparacion,
+        r.fecha_registro as fecha_reparacion,
         r.accion_realizada
       FROM pmp.ordenes_servicio o
       LEFT JOIN pmp.usuarios u ON o.tecnico_laboratorio_id = u.id
       LEFT JOIN pmp.registro_reparaciones r ON r.codigo_os = o.codigo_os
       WHERE o.estado_id = 10 
-      ORDER BY r.fecha_reparacion DESC
+      ORDER BY r.fecha_registro DESC
     `;
     const result = await pool.query(sql);
     res.json(result.rows);
@@ -72,9 +72,10 @@ router.post("/dispatch", firebaseAuth, async (req, res, next) => {
         await client.query('BEGIN');
 
         // Mueve los equipos seleccionados al estado 11 (EN_TRAYECTO_BODEGA)
+        // Y actualiza la ubicación a 1 (Bodega Central Mersan)
         const sql = `
             UPDATE pmp.ordenes_servicio 
-            SET estado_id = 11, actualizado_en = NOW() 
+            SET estado_id = 11, ubicacion_id = 1, actualizado_en = NOW() 
             WHERE codigo_os = ANY($1::text[])
         `;
         

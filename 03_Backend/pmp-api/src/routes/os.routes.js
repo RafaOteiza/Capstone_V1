@@ -28,7 +28,8 @@ router.post("/crear", async (req, res, next) => {
         marca,
         // Nuevos campos requeridos por la DB:
         terminal_id,    
-        pst_codigo
+        pst_codigo,
+        ticket_aranda
     } = req.body;
 
     // 1. Validaciones básicas
@@ -44,8 +45,8 @@ router.post("/crear", async (req, res, next) => {
     // 2. Asegurar que el equipo existe en el inventario (Upsert)
     const tablaEquipo = tipo === "CONSOLA" ? "pmp.consolas" : "pmp.validadores";
     await client.query(
-      `INSERT INTO ${tablaEquipo} (serie, modelo, marca, activo)
-       VALUES ($1, $2, $3, TRUE)
+      `INSERT INTO ${tablaEquipo} (serie, modelo, marca)
+       VALUES ($1, $2, $3)
        ON CONFLICT (serie) DO UPDATE SET modelo = EXCLUDED.modelo, marca = EXCLUDED.marca`,
       [serie_equipo, modelo || 'Genérico', marca || 'Genérico']
     );
@@ -79,9 +80,10 @@ router.post("/crear", async (req, res, next) => {
         estado_id,
         terminal_id,
         pst_codigo,
-        tecnico_terreno_id
+        tecnico_terreno_id,
+        ticket_aranda
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *;
     `;
 
@@ -94,7 +96,8 @@ router.post("/crear", async (req, res, next) => {
         estadoInicialId,
         terminalIdFinal,
         pstCodigoFinal,
-        req.user.id // ID del usuario logueado (UUID)
+        req.user.id, // ID del usuario logueado (UUID)
+        ticket_aranda || null
     ];
 
     const { rows } = await client.query(insertQuery, values);
@@ -127,6 +130,77 @@ router.post("/crear", async (req, res, next) => {
     next(e);
   } finally {
     client.release();
+  }
+});
+
+/**
+ * POST /api/os/completar-instalacion
+ * Procesa el resultado de una instalación en bus
+ */
+router.post("/completar-instalacion", async (req, res, next) => {
+  const { codigo_os, operativo, comentario, bus_ppu } = req.body;
+  
+  try {
+    // 13 = CERRADA (Éxito), 11 = EN_TRAYECTO_BODEGA (Falla/Devolución)
+    const nuevoEstado = operativo ? 13 : 11;
+    
+    // Si es operativo y viene un bus_ppu, actualizamos el bus de la OS 
+    // (Útil para órdenes IN- que nacen en STOCK)
+    const setBus = operativo && bus_ppu ? ", bus_ppu = $3" : "";
+    const params = [nuevoEstado, codigo_os];
+    if (operativo && bus_ppu) params.push(bus_ppu);
+
+    const sql = `
+      UPDATE pmp.ordenes_servicio 
+      SET 
+        estado_id = $1, 
+        actualizado_en = NOW()
+        ${setBus}
+      WHERE codigo_os = $2
+      RETURNING *
+    `;
+    
+    const { rows } = await pool.query(sql, params);
+    
+    if (rows.length === 0) return res.status(404).json({ error: "OS no encontrada" });
+
+    res.json({ 
+        success: true, 
+        message: operativo ? "Instalación completada exitosamente" : "Equipo reportado con falla, en retorno a bodega",
+        os: rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/os/mis-ordenes
+ * Lista las OS asociadas al técnico de terreno autenticado
+ */
+router.get("/mis-ordenes", async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const sql = `
+      SELECT 
+        o.codigo_os, 
+        o.tipo_equipo, 
+        o.falla, 
+        o.estado_id, 
+        e.nombre as estado_nombre,
+        o.fecha,
+        o.bus_ppu,
+        COALESCE(o.validador_serie, o.consola_serie) as serie
+      FROM pmp.ordenes_servicio o
+      JOIN pmp.estados e ON o.estado_id = e.id
+      WHERE o.tecnico_terreno_id = $1
+      ORDER BY o.fecha DESC
+      LIMIT 20
+    `;
+    const { rows } = await pool.query(sql, [userId]);
+    res.json(rows);
+  } catch (err) {
+    next(err);
   }
 });
 

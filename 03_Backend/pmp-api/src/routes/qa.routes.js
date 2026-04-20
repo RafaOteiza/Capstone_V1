@@ -1,11 +1,17 @@
 import { Router } from "express";
 import { pool } from "../db.js";
 import { firebaseAuth } from "../middleware/firebaseAuth.js";
+import { requireAnyRole } from "../middleware/requireAnyRole.js";
+import { ensureUser } from "../middleware/ensureUser.js";
+import { ROLES } from "../constants/roles.js";
 
 const router = Router();
 
+// Solo qa y admin pueden operar QA
+router.use(firebaseAuth, ensureUser, requireAnyRole(ROLES.QA, ROLES.ADMIN));
+
 // GET: Obtener cola de QA (Solo estado 6 = EN_QA)
-router.get("/queue", firebaseAuth, async (req, res, next) => {
+router.get("/queue", async (req, res, next) => {
   try {
     const sql = `
       SELECT 
@@ -29,40 +35,31 @@ router.get("/queue", firebaseAuth, async (req, res, next) => {
 });
 
 // POST: Procesar QA (Aprobar o Rechazar)
-router.post("/process", firebaseAuth, async (req, res, next) => {
+router.post("/process", async (req, res, next) => {
   const { codigo_os, accion, comentario } = req.body; // accion: 'APROBAR' | 'RECHAZAR'
   
   try {
     const client = await pool.connect();
     try {
-        await client.query('BEGIN');
+        let esAprobadoQa = accion === 'APROBAR';
+        let nuevoEstado = 11; // Siempre vuelve a Bodega (EN_TRAYECTO_BODEGA) antes de ser listo o volver a taller
+        let ubicacionId = 1;  // Bodega Central Mersan (ID 1)
+        let evento = esAprobadoQa ? 'QA_APPROVED' : 'QA_REJECTED';
 
-        let nuevoEstado = 0;
-        let evento = '';
-
-        if (accion === 'APROBAR') {
-            nuevoEstado = 7; // 7 = DISPONIBLE (Vuelve a Bodega)
-            evento = 'QA_APPROVED';
-        } else {
-            nuevoEstado = 4; // 4 = EN_DIAGNOSTICO (Vuelve a Lab para revisar de nuevo)
-            evento = 'QA_REJECTED';
-        }
-
-        // 1. Actualizar OS
+        // 1. Actualizar OS (Estado + Ubicación + es_aprobado_qa)
         await client.query(
-            `UPDATE pmp.ordenes_servicio SET estado_id = $1, actualizado_en = NOW() WHERE codigo_os = $2`,
-            [nuevoEstado, codigo_os]
+            `UPDATE pmp.ordenes_servicio 
+             SET estado_id = $1, ubicacion_id = $2, es_aprobado_qa = $3, actualizado_en = NOW() 
+             WHERE codigo_os = $4`,
+            [nuevoEstado, ubicacionId, esAprobadoQa, codigo_os]
         );
-
-        // 2. Registrar comentario en historial (si tuvieras tabla de historial)
-        // await client.query(...)
 
         await client.query('COMMIT');
         res.json({ success: true, message: `OS ${codigo_os} procesada (${accion})` });
-
     } catch (e) {
         await client.query('ROLLBACK');
-        throw e;
+        console.error("Error en QA process:", e);
+        res.status(500).json({ error: e.message });
     } finally {
         client.release();
     }

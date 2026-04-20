@@ -1,8 +1,14 @@
 import { Router } from "express";
 import { pool } from "../db.js";
 import { firebaseAuth } from "../middleware/firebaseAuth.js";
+import { requireAnyRole } from "../middleware/requireAnyRole.js";
+import { ensureUser } from "../middleware/ensureUser.js";
+import { ROLES } from "../constants/roles.js";
 
 const router = Router();
+
+// Solo tecnico_laboratorio y admin operan en Lab
+router.use(firebaseAuth, ensureUser, requireAnyRole(ROLES.TECNICO_LAB, ROLES.ADMIN));
 
 // ==========================================
 // 1. LISTAR TÉCNICOS
@@ -234,6 +240,66 @@ router.get("/parts", firebaseAuth, async (req, res, next) => {
       res.json(result.rows);
     } catch (err) {
       next(err);
+    }
+});
+// ==========================================
+// 8. OBTENER COMPLETADOS (ESTADO 10)
+// ==========================================
+router.get("/completed", firebaseAuth, async (req, res, next) => {
+    try {
+      const sql = `
+        SELECT 
+          o.codigo_os, 
+          o.fecha, 
+          o.falla, 
+          o.tipo_equipo,
+          o.bus_ppu, 
+          COALESCE(o.validador_serie, o.consola_serie) as serie,
+          u.nombre || ' ' || u.apellido as tecnico_laboratorio
+        FROM pmp.ordenes_servicio o
+        LEFT JOIN pmp.usuarios u ON o.tecnico_laboratorio_id = u.id
+        WHERE o.estado_id = 10
+        ORDER BY o.actualizado_en DESC
+      `;
+      const result = await pool.query(sql);
+      res.json(result.rows);
+    } catch (err) {
+      next(err);
+    }
+});
+
+// ==========================================
+// 9. DESPACHAR A QA MASIVO
+// ==========================================
+router.post("/dispatch-qa", firebaseAuth, async (req, res, next) => {
+    const { codigos } = req.body; // Array de codigo_os
+    
+    if (!Array.isArray(codigos) || codigos.length === 0) {
+        return res.status(400).json({ error: "Debe proporcionar una lista de códigos." });
+    }
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        // NUEVO FLUJO: El laboratorio despacha a BODEGA (Estado 11, Ubicación 1)
+        const sql = `
+            UPDATE pmp.ordenes_servicio 
+            SET estado_id = 11, ubicacion_id = 1, actualizado_en = NOW() 
+            WHERE codigo_os = ANY($1) 
+            AND estado_id = 10
+        `;
+        
+        const result = await client.query(sql, [codigos]);
+        
+        await client.query('COMMIT');
+        res.json({ success: true, count: result.rowCount, message: `Se despacharon ${result.rowCount} equipos a QA` });
+    } catch (e) {
+        await client.query('ROLLBACK');
+        console.error("Error en /dispatch-qa:", e.message);
+        res.status(500).json({ error: e.message });
+    } finally {
+        client.release();
     }
 });
 
