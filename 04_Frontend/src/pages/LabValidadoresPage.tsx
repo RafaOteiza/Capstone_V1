@@ -175,18 +175,20 @@ export default function LabValidadoresPage() {
                 <div style={{ marginTop: 'auto', paddingTop: 15, borderTop: '1px solid var(--border-color)' }}>
                     
                     {/* BOTÓN ÚNICO QUE ABRE EL MODAL */}
-                    <button 
-                        className="btn"
-                        onClick={() => setActiveTicket(t)} 
-                        style={{ 
-                            backgroundColor: btnColor, 
-                            border: 'none', color: 'white', width: '100%', 
-                            display: 'flex', justifyContent: 'center', gap: 8,
-                            padding: 12, fontSize: '0.95rem'
-                        }}
-                    >
-                        <Wrench size={18} /> {btnText}
-                    </button>
+                    {me?.rol === 'tecnico_laboratorio' && (
+                        <button 
+                            className="btn"
+                            onClick={() => setActiveTicket(t)} 
+                            style={{ 
+                                backgroundColor: btnColor, 
+                                border: 'none', color: 'white', width: '100%', 
+                                display: 'flex', justifyContent: 'center', gap: 8,
+                                padding: 12, fontSize: '0.95rem'
+                            }}
+                        >
+                            <Wrench size={18} /> {btnText}
+                        </button>
+                    )}
 
                 </div>
             </div>

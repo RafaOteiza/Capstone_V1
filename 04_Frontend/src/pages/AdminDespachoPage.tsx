@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api/http";
+import { useAlert } from "../hooks/useAlert";
+import CustomModal from "../components/CustomModal";
 import { Truck, CheckSquare, RefreshCw, PackageCheck, ClipboardCheck } from "lucide-react";
 
 interface DispatchTicket {
@@ -17,6 +19,7 @@ export default function AdminDespachoPage() {
     const [selected, setSelected] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
+    const { modal, showConfirm, showAlert, closeAlert } = useAlert();
 
     const load = async () => {
         setLoading(true);
@@ -45,23 +48,43 @@ export default function AdminDespachoPage() {
 
     // Acción de Despachar
     const handleDispatch = async () => {
-        if (selected.length === 0) return alert("Selecciona al menos un equipo.");
-        if (!confirm(`¿Confirmas el despacho de ${selected.length} equipos a Bodega?`)) return;
-
-        setProcessing(true);
-        try {
-            await api.post("/api/admin/dispatch", { codigos_os: selected });
-            alert("✅ Equipos despachados exitosamente.");
-            load();
-        } catch (e) {
-            console.error(e);
-            alert("Error al despachar.");
-        } finally {
-            setProcessing(false);
+        if (selected.length === 0) {
+            return showAlert('error', 'Error', 'Selecciona al menos un equipo.');
         }
+
+        showConfirm(
+            'Confirmar Despacho',
+            `¿Confirmas el despacho de ${selected.length} equipos a Bodega?`,
+            async () => {
+                closeAlert();
+                setProcessing(true);
+                try {
+                    await api.post("/api/admin/dispatch", { codigos_os: selected });
+                    showAlert('success', 'Éxito', 'Equipos despachados exitosamente.', () => {
+                        closeAlert();
+                        load();
+                    });
+                } catch (e) {
+                    console.error(e);
+                    showAlert('error', 'Error', 'No se pudo procesar el despacho.');
+                } finally {
+                    setProcessing(false);
+                }
+            }
+        );
     };
 
     return (
+        <>
+            <CustomModal 
+                isOpen={modal.isOpen}
+                type={modal.type}
+                title={modal.title}
+                message={modal.message}
+                onConfirm={modal.onConfirm}
+                onCancel={closeAlert}
+                confirmText={modal.confirmText}
+            />
         <div className="panel animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
                 <div>
@@ -145,5 +168,6 @@ export default function AdminDespachoPage() {
                 </div>
             )}
         </div>
+        </>
     );
 }

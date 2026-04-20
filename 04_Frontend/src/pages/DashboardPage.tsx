@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { getCachedMe } from "../app/session";
+import { useOutletContext, useNavigate } from "react-router-dom";
 import { getDashboardSummary, DashboardSummary } from "../api/dashboard"; 
+import { Me } from "../api/me";
 import { 
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid 
 } from "recharts";
-import { Wrench, CheckCircle, Bus, Cpu, RefreshCw, AlertTriangle } from "lucide-react"; 
-
+import { Wrench, CheckCircle, Bus, Cpu, RefreshCw, AlertTriangle, Archive, Microscope, Clock, Brain } from "lucide-react"; 
+import AIRiskPanel from "../components/AIRiskPanel";
 // Colores definidos para consistencia
 const COLOR_CONSOLA = '#3B82F6';   // Azul
 const COLOR_VALIDADOR = '#10B981'; // Verde
 
 export default function DashboardPage() {
-  const me = getCachedMe();
+  const me = useOutletContext<Me | null>();
+  const navigate = useNavigate();
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -60,6 +62,10 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
+  const esAdmin = me?.rol === 'admin';
+  const esJefe = me?.rol === 'jefe_taller' || esAdmin;
+  // Nota: tecnico_terreno, qa y logistica nunca llegan aqui (redirigen a sus propias rutas)
+
   // PREPARACIÓN DE DATOS PARA GRÁFICOS
   const pieChartData = [
     { name: 'Consolas', value: data.kpis.consolasEnLab, color: COLOR_CONSOLA },
@@ -97,66 +103,152 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI GRID */}
-      <div className="grid" style={{ gap: '20px', marginBottom: '30px', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+      <div className="grid" style={{ gap: '20px', marginBottom: '32px', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         
-        {/* KPI: OS Activas Lab */}
-        <div className="card" style={{ padding: '24px', borderLeft: '4px solid #F59E0B', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* KPI: En Tránsito */}
+        {esJefe && (
+        <div 
+          className="card kpi interactive" 
+          onClick={() => navigate("/bodega")}
+          style={{ borderLeft: '4px solid #F59E0B', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', cursor: 'pointer' }}
+        >
           <div>
-            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px' }}>OS Activas Lab</div>
-            <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.totalEnProceso}</div>
-            <div className="small muted" style={{ marginTop: '8px' }}>
-              <span style={{ color: COLOR_CONSOLA }}>●</span> {data.kpis.consolasEnLab} Consolas <br/>
-              <span style={{ color: COLOR_VALIDADOR }}>●</span> {data.kpis.validadoresEnLab} Val.
-            </div>
+            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>En Tránsito</div>
+            <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.totalEnTransito ?? 0}</div>
+            <div className="small muted" style={{ marginTop: '8px' }}>Desde Terreno / Lab</div>
           </div>
-          <div style={{ padding: '12px', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: '50%' }}>
-            <Wrench size={32} color="#F59E0B" />
+          <div style={{ padding: '16px', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: '14px' }}>
+            <RefreshCw size={28} color="#F59E0B" />
           </div>
         </div>
+        )}
+
+        {/* KPI: En Bodega */}
+        {esJefe && (
+        <div 
+          className="card kpi interactive" 
+          onClick={() => navigate("/bodega")}
+          style={{ borderLeft: '4px solid #10B981', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', cursor: 'pointer' }}
+        >
+          <div>
+            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>En Bodega</div>
+            <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.totalEnBodega ?? 0}</div>
+            <div className="small muted" style={{ marginTop: '8px' }}>Stock por Clasificar</div>
+          </div>
+          <div style={{ padding: '16px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '14px' }}>
+            <Archive size={28} color="#10B981" />
+          </div>
+        </div>
+        )}
+
+        {/* KPI: OS Activas Lab */}
+        {esJefe && (
+        <div 
+          className="card kpi interactive" 
+          onClick={() => navigate("/admin/despacho")}
+          style={{ borderLeft: '4px solid #3B82F6', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', cursor: 'pointer' }}
+        >
+          <div>
+            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>OS Activas Lab</div>
+            <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.totalEnProceso}</div>
+            <div className="small muted" style={{ marginTop: '8px' }}>
+              {data.kpis.consolasEnLab} Consolas | {data.kpis.validadoresEnLab} Val.
+            </div>
+            <div className="small font-bold" style={{ color: '#10B981', marginTop: '4px' }}>
+              {data.kpis.totalReparadosLab} Listos para enviar
+            </div>
+          </div>
+          <div style={{ padding: '16px', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: '14px' }}>
+            <Wrench size={28} color="#3B82F6" />
+          </div>
+        </div>
+        )}
 
         {/* KPI: Equipos Disponibles */}
-        <div className="card" style={{ padding: '24px', borderLeft: '4px solid #10B981', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {esJefe && (
+        <div className="card kpi" style={{ borderLeft: '4px solid #10B981', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px' }}>
           <div>
-            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px' }}>Equipos Disponibles</div>
+            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>Disponibles</div>
             <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.totalReparados}</div>
             <div className="small muted" style={{ marginTop: '8px' }}>Listos en Bodega/Pañol</div>
           </div>
-          <div style={{ padding: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '50%' }}>
-            <CheckCircle size={32} color="#10B981" />
+          <div style={{ padding: '16px', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: '14px' }}>
+            <CheckCircle size={28} color="#10B981" />
           </div>
         </div>
+        )}
 
         {/* KPI: Operativos */}
-        <div className="card" style={{ padding: '24px', borderLeft: '4px solid #3B82F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {esJefe && (
+        <div className="card kpi" style={{ borderLeft: '4px solid #06B6D4', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px' }}>
           <div>
-            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px' }}>Operativos</div>
+            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>Operativos</div>
             <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.totalOperativos}</div>
-            <div className="small muted" style={{ marginTop: '8px' }}>Funcionando en Bus (OK)</div>
+            <div className="small muted" style={{ marginTop: '8px' }}>Funcionando OK</div>
           </div>
-          <div style={{ padding: '12px', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderRadius: '50%' }}>
-            <Bus size={32} color="#3B82F6" />
+          <div style={{ padding: '16px', backgroundColor: 'rgba(6, 182, 212, 0.1)', borderRadius: '14px' }}>
+            <Bus size={28} color="#06B6D4" />
           </div>
         </div>
+        )}
 
         {/* KPI: PODs */}
-        <div className="card" style={{ padding: '24px', borderLeft: '4px solid #8B5CF6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {esJefe && (
+        <div className="card kpi" style={{ borderLeft: '4px solid #EC4899', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px' }}>
           <div>
-            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '4px' }}>PODs Totales</div>
+            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>PODs Totales</div>
             <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.totalPods}</div>
             <div className="small muted" style={{ marginTop: '8px' }}>
-              {data.kpis.podsReparados} Recuperados hoy/hist.
+              {data.kpis.podsReparados} Reparados
             </div>
           </div>
-          <div style={{ padding: '12px', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderRadius: '50%' }}>
-            <Cpu size={32} color="#8B5CF6" />
+          <div style={{ padding: '16px', backgroundColor: 'rgba(236, 72, 153, 0.1)', borderRadius: '14px' }}>
+            <Cpu size={28} color="#EC4899" />
           </div>
         </div>
+        )}
+
+        {/* KPI: Pendientes QA */}
+        {esJefe && (
+        <div 
+          className="card kpi interactive" 
+          onClick={() => navigate("/qa")}
+          style={{ borderLeft: '4px solid #8B5CF6', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', cursor: 'pointer' }}
+        >
+          <div>
+            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>Pendientes QA</div>
+            <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.totalEnQa ?? 0}</div>
+            <div className="small muted" style={{ marginTop: '8px' }}>Por certificar</div>
+          </div>
+          <div style={{ padding: '16px', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderRadius: '14px' }}>
+            <Microscope size={28} color="#8B5CF6" />
+          </div>
+        </div>
+        )}
+
+        {/* KPI: SLA / Tiempo Promedio */}
+        {esJefe && (
+        <div 
+          className="card kpi" 
+          style={{ borderLeft: '4px solid #F43F5E', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px' }}
+        >
+          <div>
+            <div className="small muted" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>Tiempo Promedio (SLA)</div>
+            <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{data.kpis.tiempoPromedio ?? 0}h</div>
+            <div className="small muted" style={{ marginTop: '8px' }}>Resolución Taller</div>
+          </div>
+          <div style={{ padding: '16px', backgroundColor: 'rgba(244, 63, 94, 0.1)', borderRadius: '14px' }}>
+            <Clock size={28} color="#F43F5E" />
+          </div>
+        </div>
+        )}
       </div>
 
-      {/* GRÁFICOS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '20px' }}>
+      {/* GRÁFICOS Y ANÁLISIS IA */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
         
-        {/* Gráfico de Barras: Resumen General */}
+        {/* Gráfico de Barras: Estado de la Flota (solo Admin/Jefe) */}
+        {esJefe && (
         <div className="card" style={{ padding: '24px', minHeight: '400px' }}>
           <h3 className="title" style={{ fontSize: '1.2rem', marginBottom: '20px' }}>Estado de la Flota</h3>
           <div style={{ width: '100%', height: '300px' }}>
@@ -193,8 +285,10 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </div>
         </div>
+        )}
 
         {/* Gráfico de Torta: Detalle Taller */}
+        {esJefe && (
         <div className="card" style={{ padding: '24px', minHeight: '400px' }}>
           <h3 className="title" style={{ fontSize: '1.2rem', marginBottom: '20px' }}>Detalle Equipos en Laboratorio</h3>
           {!hasDataInLab ? (
@@ -237,7 +331,14 @@ export default function DashboardPage() {
               </div>
           )}
         </div>
+        )}
+
+        {/* INTEGRACIÓN DE IA EN EL DASHBOARD */}
+        {esJefe && (
+          <AIRiskPanel />
+        )}
       </div>
+
     </div>
   );
 }

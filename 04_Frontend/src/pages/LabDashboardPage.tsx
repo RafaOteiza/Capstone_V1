@@ -3,6 +3,8 @@ import { getLabQueue, LabTicket } from "../api/lab";
 import { getCachedMe } from "../app/session";
 import { calculateSLA } from "../utils/sla";
 import { useNavigate } from "react-router-dom";
+import { useAlert } from "../hooks/useAlert";
+import CustomModal from "../components/CustomModal";
 import { 
   Activity, Clock, AlertTriangle, CheckCircle, 
   Cpu, Monitor, ArrowRight, RefreshCw, Bell 
@@ -11,6 +13,7 @@ import {
 export default function LabDashboardPage() {
   const [tickets, setTickets] = useState<LabTicket[]>([]);
   const [loading, setLoading] = useState(true);
+  const { modal, showAlert, closeAlert } = useAlert();
   const me = getCachedMe();
   const navigate = useNavigate();
   
@@ -36,12 +39,12 @@ export default function LabDashboardPage() {
     if ("Notification" in window && Notification.permission === "granted") {
         new Notification("PMP Suite - Laboratorio", {
             body: "🔔 ¡Atención! Tienes una nueva Orden de Servicio asignada.",
-            icon: "/vite.svg", // O el icono que tengas en public
-            requireInteraction: true // Se queda hasta que el usuario la cierre
+            icon: "/vite.svg", 
+            requireInteraction: true 
         });
     } else {
-        // Fallback si no dio permiso: Alerta nativa molesta
-        alert("🔔 ¡Tienes nueva carga de trabajo!");
+        // Fallback si no dio permiso: Usar nuestro modal premium
+        showAlert('info', 'Nueva Carga', '🔔 ¡Atención! Tienes una nueva Orden de Servicio asignada en tu bandeja.');
     }
   };
 
@@ -56,19 +59,18 @@ export default function LabDashboardPage() {
       ]);
       
       const todos = [...val, ...con];
-      const misTickets = todos.filter(t => t.tecnico_laboratorio_id === me?.id);
+      
+      const esJefe = me?.rol === 'jefe_taller' || me?.rol === 'admin';
+      const misTickets = esJefe ? todos : todos.filter(t => t.tecnico_laboratorio_id === me?.id);
       
       misTickets.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
       
       // --- DETECTOR DE CAMBIOS ---
-      // Si la cantidad actual es MAYOR que la referencia anterior, hubo asignación
       if (prevCountRef.current > 0 && misTickets.length > prevCountRef.current) {
           triggerNotification();
       }
       
-      // Actualizamos la referencia para la próxima comparación
       prevCountRef.current = misTickets.length;
-      
       setTickets(misTickets);
     } catch (err) {
       console.error(err);
@@ -79,7 +81,6 @@ export default function LabDashboardPage() {
 
   useEffect(() => { 
       load(); 
-      // POLLING: Revisar cada 15 segundos (más rápido para que notes la prueba)
       const interval = setInterval(load, 15000);
       return () => clearInterval(interval);
   }, []);
@@ -93,12 +94,25 @@ export default function LabDashboardPage() {
   });
 
   return (
+    <>
+      <CustomModal 
+          isOpen={modal.isOpen}
+          type={modal.type}
+          title={modal.title}
+          message={modal.message}
+          onConfirm={closeAlert}
+          onCancel={closeAlert}
+      />
     <div className="panel animate-fade-in">
       {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
         <div>
             <h2 className="title">Hola, {me?.nombre} 👋</h2>
-            <p className="muted">Resumen de tu carga de trabajo asignada.</p>
+            <p className="muted">
+                {(me?.rol === 'jefe_taller' || me?.rol === 'admin') 
+                    ? "Resumen de carga global del laboratorio."
+                    : "Resumen de tu carga de trabajo asignada."}
+            </p>
         </div>
         <div style={{display:'flex', gap: 10}}>
             {/* Botón para probar notificación manualmente */}
@@ -112,49 +126,46 @@ export default function LabDashboardPage() {
       </div>
 
       {/* CARDS KPI */}
-      <div className="grid" style={{ gap: 20, marginBottom: 40, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+      <div className="grid" style={{ gap: 20, marginBottom: 40, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         
-        <div className="card" style={{ padding: 20, borderLeft: '4px solid #3B82F6' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                    <div className="muted small">TOTAL ASIGNADOS</div>
-                    <div className="title" style={{fontSize: '2.5rem', marginBottom: 0}}>{total}</div>
-                </div>
-                <div style={{ padding: 10, background: '#EFF6FF', borderRadius: 8, height: 'fit-content' }}>
-                    <Activity color="#3B82F6" size={24} />
-                </div>
+        <div className="card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #3B82F6' }}>
+            <div>
+                <div className="muted small" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>TOTAL ASIGNADOS</div>
+                <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1 }}>{total}</div>
+                <div className="small muted" style={{ marginTop: '8px' }}>Equipos en bandeja</div>
+            </div>
+            <div style={{ padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '14px' }}>
+                <Activity color="#3B82F6" size={28} />
             </div>
         </div>
 
-        <div className="card" style={{ padding: 20, borderLeft: '4px solid #EF4444' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                    <div className="muted small">SLA CRÍTICO/VENCIDO</div>
-                    <div className="title" style={{fontSize: '2.5rem', marginBottom: 0, color: criticos.length > 0 ? '#EF4444' : 'inherit'}}>
-                        {criticos.length}
-                    </div>
+        <div className="card" style={{ padding: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderLeft: '4px solid #EF4444' }}>
+            <div>
+                <div className="muted small" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '8px' }}>SLA CRÍTICO / VENCIDO</div>
+                <div className="title" style={{ fontSize: '2.5rem', margin: 0, lineHeight: 1, color: criticos.length > 0 ? '#EF4444' : 'inherit' }}>
+                    {criticos.length}
                 </div>
-                <div style={{ padding: 10, background: '#FEF2F2', borderRadius: 8, height: 'fit-content' }}>
-                    <AlertTriangle color="#EF4444" size={24} />
-                </div>
+                <div className="small muted" style={{ marginTop: '8px' }}>Atención prioritaria</div>
             </div>
-            <div className="small muted" style={{marginTop: 5}}>Atención prioritaria requerida</div>
+            <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '14px' }}>
+                <AlertTriangle color="#EF4444" size={28} />
+            </div>
         </div>
 
-        <div className="card" style={{ padding: 20, borderLeft: '4px solid #F59E0B' }}>
-            <div className="muted small" style={{marginBottom: 10}}>ESTADO DE AVANCE</div>
+        <div className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderLeft: '4px solid #F59E0B' }}>
+            <div className="muted small" style={{ textTransform: 'uppercase', fontWeight: '800', marginBottom: '10px' }}>ESTADO DE AVANCE</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: 4 }}>
                 <span>🔬 Diagnóstico</span>
                 <strong>{enDiagnostico}</strong>
             </div>
-            <div style={{ width: '100%', height: 6, background: '#E5E7EB', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ width: total ? `${(enDiagnostico/total)*100}%` : '0%', background: '#3B82F6', height: '100%', transition: 'width 0.5s' }}></div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginTop: 12, marginBottom: 4 }}>
                 <span>🛠️ Reparación</span>
                 <strong>{enReparacion}</strong>
             </div>
-            <div style={{ width: '100%', height: 6, background: '#E5E7EB', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{ width: total ? `${(enReparacion/total)*100}%` : '0%', background: '#F59E0B', height: '100%', transition: 'width 0.5s' }}></div>
             </div>
         </div>
@@ -169,17 +180,18 @@ export default function LabDashboardPage() {
           </div>
       )}
 
-      <div className="grid" style={{ gap: 15 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
         {tickets.slice(0, 5).map(t => { 
             const sla = calculateSLA(t.fecha);
             const isValidador = t.codigo_os.startsWith('MV') || t.codigo_os.startsWith('PDV');
 
             return (
                 <div key={t.codigo_os} className="card animate-fade-in" style={{ 
-                    padding: 15, 
+                    padding: '16px 24px', 
                     display: 'flex', alignItems: 'center', gap: 20, 
                     border: sla.vencido ? '1px solid #EF4444' : undefined,
-                    backgroundColor: sla.vencido ? 'rgba(239, 68, 68, 0.05)' : undefined
+                    backgroundColor: sla.vencido ? 'rgba(239, 68, 68, 0.05)' : undefined,
+                    borderLeft: t.codigo_os === tickets[0].codigo_os ? '4px solid #3B82F6' : undefined
                 }}>
                     <div style={{ 
                         width: 44, height: 44, borderRadius: 10, flexShrink: 0,
@@ -221,5 +233,6 @@ export default function LabDashboardPage() {
         })}
       </div>
     </div>
+    </>
   );
 }

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { useOutletContext } from "react-router-dom";
+import { Me } from "../api/me";
 import { getLabQueue, getLabTechnicians, assignTicket, LabTicket, LabTech } from "../api/lab";
 import { RefreshCw, User, Cpu, Monitor, Check, AlertTriangle, CheckCircle } from "lucide-react";
 
@@ -16,6 +18,7 @@ const selectStyle = {
 };
 
 export default function LabAsignacionPage() {
+  const me = useOutletContext<Me | null>();
   const [tickets, setTickets] = useState<LabTicket[]>([]);
   const [techs, setTechs] = useState<LabTech[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,7 +198,7 @@ export default function LabAsignacionPage() {
                                       style={selectStyle}
                                       value={t.tecnico_laboratorio_id || ""}
                                       onChange={(e) => handleAssign(t.codigo_os, e.target.value)}
-                                      disabled={changing === t.codigo_os}
+                                      disabled={changing === t.codigo_os || (me?.rol !== 'admin' && me?.rol !== 'jefe_taller')}
                                   >
                                       <option value="">-- Sin Asignar --</option>
                                       {techs.map(tech => (
