@@ -167,7 +167,7 @@ export default function TrazabilidadPage() {
                       <td>
                          <span style={{ fontSize: '0.9rem' }}>{r.ubicacion?.replace('Bodega ', '')}</span>
                       </td>
-                      <td>{getEstadoBadge(r.estado, r.estado)}</td>
+                      <td>{getEstadoBadge(r.estado)}</td>
                     </tr>
                   ))}
                 </tbody>
