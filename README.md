@@ -1,15 +1,19 @@
 # PMP Suite — Sistema ERP de Gestión de Mantenimiento Preventivo
 
-![PMP Suite — Estado: Validación Final v5.0](https://img.shields.io/badge/Estado-100%25_Operativo_v5.0-10B981?style=for-the-badge)
+![PMP Suite — Estado: En preparación](https://img.shields.io/badge/Estado-En_preparaci%C3%B3n-F59E0B?style=for-the-badge)
 ![DuocUC](https://img.shields.io/badge/DuocUC-Ingeniería_Informática-002D62?style=for-the-badge)
 
-**Proyecto de Título (APT) — Abril 2026**  
-**Versión Final: 5.0 (Edición Gold & Predictive AI)**
+**Proyecto de Título (Capstone) — Duoc UC**<br>
+**Versión en desarrollo: 5.0 (Edición Gold & Predictive AI)**
 
 **Equipo de Proyecto (PMO / Desarrollo):**
-* **Luis Arenas:** Project Manager (PMO) y Arquitectura de Sistemas
-* **Matías Garrido:** Data Lead (DBA) y Desarrollo Backend
-* **Rafael Oteiza:** Tech Lead y Desarrollo Frontend
+* **[Matías Garrido](https://github.com/matiasgarridopinto):** documentación y levantamiento de requerimientos.
+* **[Rafael Oteiza](https://github.com/RafaOteiza):** gestión, arquitectura, base de datos y backend.
+* **[Luis Arenas](https://github.com/luis26001):** frontend web y aplicación móvil.
+
+> La participación individual se respaldará mediante commits y pull requests realizados desde la cuenta de cada integrante. La asignación anterior representa la distribución acordada del trabajo y no reemplaza la evidencia individual exigida durante el Capstone.
+
+Consulta la [guía de contribución](./CONTRIBUTING.md) para el flujo de ramas, commits y pull requests del equipo.
 
 ---
 
@@ -19,10 +23,10 @@
 2. [Especificación de Requerimientos (ERS)](#2-especificación-de-requerimientos-ers)
 3. [Arquitectura y Tecnologías](#3-arquitectura-y-tecnologías)
 4. [Flujo Operativo (Estado y RBAC)](#4-flujo-operativo-estado-y-rbac)
-5. [Logros Alcanzados (Trazabilidad E2E)](#5-logros-alcanzados-trazabilidad-e2e)
+5. [Estado de implementación y validación](#5-estado-de-implementación-y-validación)
 6. [Diagrama de Gantt del Proyecto](#6-diagrama-de-gantt-del-proyecto)
-7. [Módulo de Predicción IA (Nuevo v5.0)](#8-módulo-de-predicción-ia-nuevo-v50)
-8. [Instrucciones de Ejecución (Paso a Paso)](#9-instrucciones-de-ejecución-paso-a-paso)
+7. [Módulo de Predicción IA (Nuevo v5.0)](#7-módulo-de-predicción-ia-nuevo-v50)
+8. [Instrucciones de Ejecución (Paso a Paso)](#8-instrucciones-de-ejecución-paso-a-paso)
 
 ---
 
@@ -82,15 +86,18 @@ El proyecto se despliega localmente abarcando capas claras de backend, frontend 
 
 ---
 
-## 5. Logros Alcanzados (Trazabilidad E2E)
+## 5. Estado de implementación y validación
 
-*   **Integración Exitosa Aranda-PMP:** Sincronización de trazabilidad inversa funcional con autocompletado inteligente.
-*   **Limpieza de Datos de Producción:** Inventario saneado con 100% de equipos operativos reales (101 validadores, 100 consolas).
-*   **Dashboards dinámicos:** Implementación de gráficos Premium con Recharts (Doughnut charts interactivos).
-*   **46/46 Pruebas End-to-End Superadas:** Flujos logísticos 100% cubiertos.
-*   **14/14 Pruebas de Estrés Superadas:** Resistencia a colisiones de datos comprobada.
-*   **Módulo de IA Predictiva:** Implementación de modelos *Random Forest* para detección de equipos "Limón" con una precisión del 91.4%.
-*   **Aesthetics Gold Edition:** Interfaz modernizada con Glassmorphism y soporte nativo Dark/Light Mode.
+El repositorio contiene una implementación avanzada de la API, la interfaz web, la aplicación móvil, la base de datos, los scripts de prueba y el módulo de análisis predictivo. También incluye dashboards con Recharts, control de acceso por roles y una interfaz con modos claro y oscuro.
+
+Antes de presentar resultados como evidencia final del Capstone se deben completar y registrar las siguientes validaciones reproducibles:
+
+* Ejecutar las pruebas End-to-End sobre una base de datos aislada y conservar el reporte de resultados.
+* Ejecutar las pruebas de estrés en un entorno controlado y documentar latencia, concurrencia y datos de prueba.
+* Mantener evidencia de la compilación de producción del frontend —verificada el 21/07/2026— y corregir la exportación de la aplicación móvil.
+* Volver a entrenar y evaluar el modelo de IA, adjuntando dataset, metodología, matriz de confusión y métricas obtenidas.
+
+Las cifras históricas incluidas en scripts o documentos de trabajo no se consideran resultados confirmados hasta que puedan reproducirse y anexarse como evidencia.
 
 ---
 
@@ -130,7 +137,7 @@ gantt
 
 ---
 
-## 8. Módulo de Predicción IA (Nuevo v5.0)
+## 7. Módulo de Predicción IA (Nuevo v5.0)
 
 La PMP Suite incorpora un motor de **Machine Learning** alojado en la carpeta `06_ModelosIA`. Este componente analiza el historial de fallas y tiempos de reparación para generar alertas tempranas.
 
@@ -142,26 +149,29 @@ La PMP Suite incorpora un motor de **Machine Learning** alojado en la carpeta `0
 
 ---
 
-## 9. Instrucciones de Ejecución (Paso a Paso)
+## 8. Instrucciones de Ejecución (Paso a Paso)
 
-### 7.1. Requisitos Previos
-- Contar con servicio de base de datos **PostgreSQL `v16`** levantado bajo las credenciales usuario: `postgres`, clave: `admin`, base conectada en `pmp_suite`.
+### 8.1. Requisitos Previos
+- Contar con **PostgreSQL 16 o superior** y una base de datos local para PMP Suite. Las credenciales deben configurarse mediante variables de entorno; no se almacenan en el repositorio.
 - **Node JS `20.x`** alojado local o de entorno nvm para levantamiento.
 
-### 7.2. Levantar API (Backend)
+### 8.2. Levantar API (Backend)
 ```bash
 # 1. Acceder a la carpeta del backend
 cd 03_Backend/pmp-api/
 
-# 2. Instalar dependencias si no se ha hecho
+# 2. Crear la configuración local y completar sus valores
+cp .env.example .env
+
+# 3. Instalar dependencias si no se ha hecho
 npm install
 
-# 3. Encender el backend con entorno de variables
+# 4. Encender el backend con entorno de variables
 node server.js
 ```
 *(El backend debe indicar por consola la conexión exitosa a PosgreSQL levantando en `http://localhost:4000`)*
 
-### 7.3. Levantar Interfaz Gráfica (Frontend)
+### 8.3. Levantar Interfaz Gráfica (Frontend)
 Abrir una segunda terminal independiente en la raíz `Tesis`.
 ```bash
 # 1. Mover a la ruta de Frontend 
@@ -175,8 +185,8 @@ npm run dev
 ```
 *(El frontend quedará enganchado en `http://localhost:5173` listo para login)*
 
-### 7.4. Comprobar Pruebas de Sistema
-Recomendable abrir terminal secundaria en Backend para comprobación técnica.
+### 8.4. Comprobar Pruebas de Sistema
+Los scripts de prueba modifican datos. Deben ejecutarse únicamente sobre una base aislada preparada para validación.
 ```bash
 # Dentro de 03_Backend/pmp-api/
 
@@ -186,8 +196,8 @@ node e2e_full_v2.js
 # Correr escenarios masivos y carga destructiva
 node stress_test.js 
 ```
-Si los resultados finalizan en `✅ 46/46` y `✅ 14/14`, el entorno está en perfectas condiciones y no hay brechas en conectividad.
+Los resultados deben guardarse en `Evidencias` junto con la fecha, versión probada, configuración utilizada y observaciones.
 
 ---
 
-> Documento final generado para Tesis Universitaria — Actualización: 18/04/2026
+> Documento de orientación del proyecto Capstone — Actualización: 21/07/2026
